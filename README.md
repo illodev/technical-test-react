@@ -1,5 +1,7 @@
 # Technical Test: React Developer with Next.js and Tailwind CSS
 
+Application URL: [https://technical-test-react.illodev.com/](https://technical-test-react.illodev.com/)
+
 ![alt text](/docs/dashboard.png)
 
 ## Table of Contents
