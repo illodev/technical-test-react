@@ -1,0 +1,209 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+  createdAt         DateTime @default(now()) @map(name: "created_at")
+  updatedAt         DateTime @default(now()) @updatedAt @map(name: "updated_at")
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map(name: "accounts")
+}
+
+model Session {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionToken String   @unique
+  expires      DateTime
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map(name: "sessions")
+}
+
+model User {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now()) @map(name: "created_at")
+  updatedAt     DateTime  @default(now()) @updatedAt @map(name: "updated_at")
+
+  accounts      Account[]
+  sessions      Session[]
+  ProjectMember ProjectMember[]
+  Task          Task[]
+
+  @@map(name: "users")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map(name: "verification_tokens")
+}
+
+model Project {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key         String   @unique @db.VarChar(10)
+  name        String   @unique @db.VarChar(255)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map(name: "created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map(name: "updated_at")
+
+  statusId String?        @map(name: "status_id") @db.Uuid
+  status   ProjectStatus? @relation(fields: [statusId], references: [id])
+
+  ProjectMember ProjectMember[]
+  Task          Task[]
+  TaskStatus    TaskStatus[]
+  TaskPriority  TaskPriority[]
+  TaskLabel     TaskLabel[]
+
+  @@map(name: "projects")
+}
+
+model ProjectStatus {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String    @unique @db.VarChar(255)
+  color     String?   @db.VarChar(255)
+  createdAt DateTime  @default(now()) @map(name: "created_at")
+  updatedAt DateTime  @default(now()) @updatedAt @map(name: "updated_at")
+  Project   Project[]
+
+  @@map(name: "project_statuses")
+}
+
+model ProjectMember {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt DateTime @default(now()) @map(name: "created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map(name: "updated_at")
+
+  // The project of the member
+  projectId String  @map(name: "project_id") @db.Uuid
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // The user of the member
+  userId String @map(name: "user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map(name: "project_members")
+}
+
+model Task {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  number      Int      @db.Integer
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map(name: "created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map(name: "updated_at")
+
+  // The project of the task
+  projectId String  @map(name: "project_id") @db.Uuid
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // The status of the task
+  statusId String?     @map(name: "status_id") @db.Uuid
+  status   TaskStatus? @relation(fields: [statusId], references: [id])
+
+  // The priority of the task
+  priorityId String?       @map(name: "priority_id") @db.Uuid
+  priority   TaskPriority? @relation(fields: [priorityId], references: [id])
+
+  // The label of the task
+  labelId String?    @map(name: "label_id") @db.Uuid
+  label   TaskLabel? @relation(fields: [labelId], references: [id])
+
+  // The parent task of the task
+  taskId String? @map(name: "task_id") @db.Uuid
+  task   Task?   @relation("Task", fields: [taskId], references: [id])
+  Task   Task[]  @relation("Task")
+
+  // Task reporter
+  reporterId String? @map(name: "reporter_id") @db.Uuid
+  reporter   User?   @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, number])
+  @@map(name: "tasks")
+}
+
+model TaskStatus {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(255)
+  color     String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map(name: "created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map(name: "updated_at")
+
+  // The project of the status
+  projectId String  @map(name: "project_id") @db.Uuid
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Tasks of the status
+  Task Task[]
+
+  @@unique([projectId, name])
+  @@map(name: "task_statuses")
+}
+
+model TaskPriority {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(255)
+  color     String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map(name: "created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map(name: "updated_at")
+
+  // The project of the priority
+  projectId String  @map(name: "project_id") @db.Uuid
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Tasks of the priority
+  Task Task[]
+
+  @@unique([projectId, name])
+  @@map(name: "task_priorities")
+}
+
+model TaskLabel {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(255)
+  color     String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map(name: "created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map(name: "updated_at")
+
+  // The project of the label
+  projectId String  @map(name: "project_id") @db.Uuid
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Tasks of the label
+  Task Task[]
+
+  @@unique([projectId, name])
+  @@map(name: "task_labels")
+}
