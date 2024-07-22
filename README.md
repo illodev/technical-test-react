@@ -272,3 +272,7 @@ You can change the project's name and description, delete the project, and add l
 ## Author
 
 -   [Álvaro Jáuregui Pinto](https://illodev.com/)
+
+## Final Notes:
+
+I would have liked to test the application with Cypress, but I didn't have enough time to do so. Still, I hope the application meets the technical test requirements. Thanks for the opportunity! 🚀
